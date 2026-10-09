@@ -1,0 +1,22 @@
+# NO secrets here. Anything left as TODO blocks dependent tests (B-INPUT).
+baseUrl: TODO
+environment: staging
+buildVersion: TODO            # expected value; preflight verifies it
+allowDestructive: false
+prodDomains: [TODO]           # stop if navigation lands here
+loginPath: TODO               # e.g. /login
+roles:
+  standard: { userEnv: STANDARD_USER, passEnv: STANDARD_PASS }
+  admin:    { userEnv: ADMIN_USER,    passEnv: ADMIN_PASS }
+journeys:
+  - id: J1
+    name: TODO e.g. "Search product, open details, add to cart, view cart"
+    role: standard
+    priority: P0
+searchData:
+  hits: [TODO]                # terms that MUST return results
+  misses: [TODO]              # terms that must return a clean "no results"
+expectations:                 # app-specific rules the generic skills can't know
+  - TODO e.g. "Cart badge count updates within 2s of add-to-cart"
+outOfScope: [TODO]
+bugTracker: TODO              # Jira / ADO / GitHub

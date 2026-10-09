@@ -1,0 +1,9 @@
+node_modules/
+.env.test
+auth/*
+!auth/.gitkeep
+test-results/
+playwright-report/
+reports/mcp-output/
+reports/runs/*
+!reports/runs/.gitkeep
