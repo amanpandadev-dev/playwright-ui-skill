@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "E2E verify-run report v1",
+  "description": "Written only by record-execution.mjs classify from a Playwright JSON report of a developer-run execution. It holds no page text: error messages stay in the git-ignored Playwright output. Obligation executionStatus values cite this file as resultReference.",
+  "type": "object",
+  "required": ["schemaVersion", "contractsVersion", "runId", "attempt", "source", "target", "specs", "tests", "counts", "unmapped"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "contractsVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "runId": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+    "attempt": { "type": "integer", "minimum": 1 },
+    "source": {
+      "type": "object",
+      "required": ["playwrightReport", "playwrightVersion", "startTime"],
+      "additionalProperties": false,
+      "properties": {
+        "playwrightReport": { "$ref": "#/$defs/text" },
+        "playwrightVersion": { "type": ["string", "null"] },
+        "startTime": { "type": ["string", "null"] }
+      }
+    },
+    "target": {
+      "description": "The setup-decisions lane the run used. A production environment is refused.",
+      "type": "object",
+      "required": ["laneId", "target", "environment"],
+      "additionalProperties": false,
+      "properties": {
+        "laneId": { "$ref": "#/$defs/text" },
+        "target": { "enum": ["local", "azure", "aws", "gcp", "other"] },
+        "environment": { "$ref": "#/$defs/text" }
+      }
+    },
+    "specs": {
+      "description": "Fingerprint of every spec file that ran, as it was when this report was written. A result is stale once its spec changes.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "fingerprint"],
+        "additionalProperties": false,
+        "properties": { "path": { "$ref": "#/$defs/text" }, "fingerprint": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+      }
+    },
+    "tests": { "type": "array", "items": { "$ref": "#/$defs/testResult" } },
+    "counts": {
+      "type": "object",
+      "required": ["passed", "failed", "skipped", "flaky", "byClass"],
+      "additionalProperties": false,
+      "properties": {
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 },
+        "flaky": { "type": "integer", "minimum": 0 },
+        "byClass": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Mechanical": { "type": "integer", "minimum": 0 },
+            "Environment": { "type": "integer", "minimum": 0 },
+            "Behavioural": { "type": "integer", "minimum": 0 },
+            "Unclassified": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "unmapped": {
+      "description": "Playwright results that could not be matched to exactly one @e2e-meta testId. Since contracts 3.7.0 each holds its project, outcome and failure, so the dashboard shows it.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "line", "title", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "file": { "$ref": "#/$defs/text" },
+          "line": { "type": "integer" },
+          "title": { "type": "string" },
+          "reason": { "$ref": "#/$defs/text" },
+          "project": { "type": "string" },
+          "outcome": { "enum": ["Passed", "Failed", "Skipped", "Flaky"] },
+          "retries": { "type": "integer", "minimum": 0 },
+          "failure": { "$ref": "#/$defs/failure" }
+        }
+      }
+    },
+    "playwrightTotals": {
+      "description": "Playwright's own result counts (stats expected, unexpected, flaky, skipped). Matched plus unmatched results must add up to these.",
+      "type": "object",
+      "required": ["passed", "failed", "flaky", "skipped"],
+      "additionalProperties": false,
+      "properties": {
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "flaky": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "runErrors": {
+      "description": "Errors Playwright raised outside any test, such as a spec that fails to load or a global setup that throws. Classified only; the messages stay in the git-ignored report.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/failure" }
+    }
+  },
+  "$defs": {
+    "text": { "type": "string", "minLength": 1 },
+    "testResult": {
+      "type": "object",
+      "required": ["testId", "specPath", "project", "outcome", "retries"],
+      "additionalProperties": false,
+      "properties": {
+        "testId": { "$ref": "#/$defs/text" },
+        "specPath": { "$ref": "#/$defs/text" },
+        "project": { "type": "string" },
+        "outcome": { "enum": ["Passed", "Failed", "Skipped", "Flaky"] },
+        "retries": { "type": "integer", "minimum": 0 },
+        "failure": { "$ref": "#/$defs/failure" }
+      },
+      "allOf": [
+        { "if": { "properties": { "outcome": { "const": "Failed" } } }, "then": { "required": ["failure"] } }
+      ]
+    },
+    "failure": {
+      "type": "object",
+      "required": ["class", "reason", "repairable"],
+      "additionalProperties": false,
+      "properties": {
+        "class": { "enum": ["Mechanical", "Environment", "Behavioural", "Unclassified"] },
+        "reason": {
+          "enum": ["locator-timeout", "strict-mode-violation", "element-detached", "not-actionable", "assertion-locator-unresolved",
+            "target-unreachable", "auth-rejected", "auth-state-missing", "api-request-failed", "browser-unavailable",
+            "fixture-or-seed-failure", "environment-contract", "assertion-mismatch", "test-timeout", "unrecognised"]
+        },
+        "repairable": { "type": "boolean" },
+        "locator": { "type": "string" },
+        "matcher": { "type": "string" },
+        "location": { "type": "string" }
+      }
+    }
+  }
+}

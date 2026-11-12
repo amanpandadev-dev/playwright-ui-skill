@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Authored coverage evidence manifest v1.1 (accepts v1.0)",
+  "type": "object",
+  "required": ["schemaVersion", "applicationId", "requirements", "obligations", "artifacts"],
+  "properties": {
+    "schemaVersion": {"enum": ["1.0", "1.1"]},
+    "contractsVersion": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+    "setupDecisionsRef": {"$ref": "#/$defs/fileRef"},
+    "requirementsInventoryRef": {"$ref": "#/$defs/fileRef"},
+    "scope": {
+      "type": "object", "required": ["type", "authority"],
+      "properties": {
+        "type": {"enum": ["setup-initial", "adopt-existing", "incremental", "replacement", "full-sweep", "smoke-sample"]},
+        "authority": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}},
+        "storyIdRule": {"$ref": "#/$defs/text"},
+        "exclusions": {"type": "array", "items": {"type": "object", "required": ["path", "authority"], "properties": {"path": {"$ref": "#/$defs/text"}, "authority": {"$ref": "#/$defs/text"}}}}
+      }
+    },
+    "review": {
+      "type": "object", "required": ["status", "reviewer", "reviewedAt", "reviewedCommit", "planFingerprint"],
+      "properties": {
+        "status": {"enum": ["Draft", "ChangesRequested", "Approved", "Superseded"]},
+        "reviewer": {"type": ["string", "null"]}, "reviewedAt": {"type": ["string", "null"]},
+        "reviewedCommit": {"type": ["string", "null"]}, "planFingerprint": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "notes": {"type": ["string", "null"]}
+      },
+      "if": {"properties": {"status": {"const": "Approved"}}},
+      "then": {"properties": {"reviewer": {"$ref": "#/$defs/text"}, "reviewedAt": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}"}, "reviewedCommit": {"$ref": "#/$defs/text"}, "planFingerprint": {"$ref": "#/$defs/sha256"}}}
+    },
+    "applicationId": {"$ref": "#/$defs/text"},
+    "supportingTests": {
+      "type": "array", "items": {
+        "type": "object", "required": ["testId", "requirementReferences", "automationReference"],
+        "properties": {
+          "testId": {"$ref": "#/$defs/text"}, "requirementReferences": {"$ref": "#/$defs/ids"},
+          "automationReference": {"type": "object", "required": ["specPath"], "properties": {"specPath": {"$ref": "#/$defs/text"}}}
+        }
+      }
+    },
+    "requirements": {
+      "type": "array", "minItems": 1,
+      "items": {"type": "object", "required": ["requirementId", "coverageStatus"], "properties": {"requirementId": {"$ref": "#/$defs/text"}, "coverageStatus": {"$ref": "#/$defs/status"}}}
+    },
+    "requirementGroups": {
+      "description": "Rolled-up status per source-owned requirement identifier from the inventory (gate G-D02).",
+      "type": "array", "items": {"type": "object", "required": ["groupId", "coverageStatus"], "properties": {"groupId": {"$ref": "#/$defs/text"}, "coverageStatus": {"$ref": "#/$defs/status"}}}
+    },
+    "obligations": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/obligation"}},
+    "artifacts": {
+      "type": "object", "required": ["ledger", "gaps", "plans"],
+      "properties": {
+        "ledger": {"$ref": "#/$defs/text"}, "gaps": {"$ref": "#/$defs/text"},
+        "plans": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["path", "obligationIds"], "properties": {"path": {"$ref": "#/$defs/text"}, "obligationIds": {"$ref": "#/$defs/ids"}}}}
+      }
+    }
+  },
+  "allOf": [
+    {"if": {"properties": {"schemaVersion": {"const": "1.1"}}}, "then": {"required": ["contractsVersion", "setupDecisionsRef", "requirementsInventoryRef", "scope", "review"]}}
+  ],
+  "$defs": {
+    "text": {"type": "string", "minLength": 1},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "fileRef": {"type": "object", "required": ["path", "fingerprint"], "properties": {"path": {"$ref": "#/$defs/text"}, "fingerprint": {"$ref": "#/$defs/sha256"}}},
+    "ids": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+    "status": {"enum": ["Planned", "Covered", "PartiallyCovered", "Blocked", "NotBrowserObservable", "OutOfScope"]},
+    "obligation": {
+      "type": "object",
+      "required": ["obligationId", "requirementId", "persona", "preconditions", "expectedBehavior", "evidenceLayer", "mockingScope", "testIds", "assertionReferences", "coverageStatus", "executionStatus"],
+      "properties": {
+        "obligationId": {"$ref": "#/$defs/text"}, "requirementId": {"$ref": "#/$defs/text"},
+        "persona": {"$ref": "#/$defs/text"}, "preconditions": {"$ref": "#/$defs/text"}, "expectedBehavior": {"$ref": "#/$defs/text"},
+        "evidenceLayer": {"enum": ["BrowserMocked", "BrowserIntegrated", "API", "Repository", "Internal"]},
+        "mockingScope": {"type": "array", "items": {"$ref": "#/$defs/text"}},
+        "testIds": {"$ref": "#/$defs/ids"},
+        "dataRequirements": {"description":"Data an obligation needs, derived from its criterion. Plan-owned and fingerprinted. Required for browser obligations in api-seeded and existing-dataset lanes.","type":"object","required":["entities","mutates"],"properties":{"lane":{"$ref":"#/$defs/text"},"entities":{"type":"array","minItems":1,"items":{"type":"object","required":["entity","state"],"properties":{"entity":{"$ref":"#/$defs/text"},"state":{"$ref":"#/$defs/text"},"count":{"type":"integer","minimum":0},"owner":{"$ref":"#/$defs/text"}}}},"variants":{"type":"array","items":{"$ref":"#/$defs/text"}},"mutates":{"type":"boolean"}}},
+        "plannedJourneys": {"description": "Journey IDs (TC-Jxx) in this obligation's plan that will establish it; plan-owned and fingerprinted. Required for Planned.", "type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+        "assertionReferences": {
+          "type": "array", "items": {
+            "type": "object", "required": ["testId", "path", "anchor", "sourceFingerprint", "testSourceFingerprint"],
+            "properties": {"testId": {"$ref": "#/$defs/text"}, "path": {"$ref": "#/$defs/text"}, "anchor": {"$ref": "#/$defs/text"}, "sourceFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "testSourceFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}
+          }
+        },
+        "coverageStatus": {"description": "Planned: a journey is planned but not yet authored; valid only before the tests stage.", "enum": ["Planned", "Covered", "Blocked", "NotBrowserObservable", "OutOfScope"]},
+        "executionStatus": {"enum": ["NotRun", "Passed", "Failed", "Skipped"]},
+        "resultReference": {"$ref": "#/$defs/text"},
+        "blocker": {"$ref": "#/$defs/text"}, "remediation": {"$ref": "#/$defs/text"}, "owner": {"$ref": "#/$defs/text"},
+        "blockedActivity": {"$ref": "#/$defs/text"}, "exclusionAuthority": {"$ref": "#/$defs/text"},
+        "claimedTests": {
+          "description": "Tests that pre-existing artifacts map to this obligation, recorded by scope adopt-existing. Unverified: they move into testIds only when e2e-ui-test-generator records assertion evidence.",
+          "type": "array",
+          "items": {"type": "object", "required": ["testId", "claimedBy"], "properties": {"testId": {"$ref": "#/$defs/text"}, "claimedBy": {"type": "array", "minItems": 1, "items": {"enum": ["catalog", "plan", "ledger", "gap-register"]}}, "specPath": {"$ref": "#/$defs/text"}}}
+        },
+        "review": {
+          "type": "object", "required": ["status", "trigger", "input", "action", "assertions", "limitations", "reviewer"],
+          "properties": {"status": {"enum": ["Supported", "Unsupported", "Pending"]}, "trigger": {"$ref": "#/$defs/text"}, "input": {"$ref": "#/$defs/text"}, "action": {"$ref": "#/$defs/text"}, "assertions": {"$ref": "#/$defs/text"}, "limitations": {"$ref": "#/$defs/text"}, "reviewer": {"$ref": "#/$defs/text"}}
+        }
+      },
+      "allOf": [
+        {"if": {"properties": {"coverageStatus": {"const": "Covered"}}}, "then": {"required": ["review"], "properties": {"testIds": {"minItems": 1}, "assertionReferences": {"minItems": 1}, "review": {"properties": {"status": {"const": "Supported"}}}}}},
+        {"if": {"properties": {"coverageStatus": {"enum": ["Blocked", "NotBrowserObservable", "OutOfScope"]}}}, "then": {"required": ["blocker", "remediation", "owner", "blockedActivity"]}},
+        {"if": {"properties": {"coverageStatus": {"const": "Planned"}}}, "then": {"required": ["plannedJourneys"], "properties": {"plannedJourneys": {"minItems": 1}, "testIds": {"maxItems": 0}, "assertionReferences": {"maxItems": 0}, "executionStatus": {"const": "NotRun"}}}},
+        {"if": {"properties": {"coverageStatus": {"const": "OutOfScope"}}}, "then": {"required": ["exclusionAuthority"]}},
+        {"if": {"properties": {"executionStatus": {"enum": ["Passed", "Failed", "Skipped"]}}}, "then": {"required": ["resultReference"]}},
+        {"if": {"properties": {"evidenceLayer": {"const": "BrowserIntegrated"}}}, "then": {"properties": {"mockingScope": {"maxItems": 0}}}}
+      ]
+    }
+  }
+}

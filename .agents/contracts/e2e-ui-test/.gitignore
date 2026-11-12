@@ -1,0 +1,2 @@
+# Keep the shipped schema despite repository-wide coverage report ignores.
+!/schemas/coverage-manifest.schema.json

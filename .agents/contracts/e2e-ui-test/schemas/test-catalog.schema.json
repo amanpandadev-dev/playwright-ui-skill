@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "test-catalog.schema.json",
+  "title": "Playwright portal test catalog v3 template",
+  "$comment": "Replace every __...__ enum sentinel with repository-authoritative values before use.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "applicationId", "applicationDisplayName", "catalogVersion", "tests"],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "const": "3.0" },
+    "applicationId": { "type": "string", "minLength": 1 },
+    "applicationDisplayName": { "type": "string", "minLength": 1 },
+    "catalogVersion": { "type": "string", "pattern": "^[0-9]{8}\\.3\\.0$" },
+    "sourceCommitSha": { "type": "string", "pattern": "^[0-9a-fA-F]{40,64}$" },
+    "tests": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/test" } }
+  },
+  "$defs": {
+    "nonEmptyString": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+    "remediation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "owner"],
+      "properties": {
+        "action": { "$ref": "#/$defs/nonEmptyString" },
+        "owner": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "automationReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["specPath", "testId", "testTitle"],
+      "properties": {
+        "specPath": { "$ref": "#/$defs/nonEmptyString" },
+        "testId": { "$ref": "#/$defs/nonEmptyString" },
+        "testTitle": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "test": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "testId", "journeyId", "planReference", "requirementReferences", "storyReference",
+        "featureReference", "businessTitle", "businessDescription", "expectedOutcome", "risk",
+        "priority", "testPacks", "automationReference", "browserApplicability",
+        "environmentApplicability", "businessPersona", "runtimeAuthProfile", "roleSensitive",
+        "tags", "portalEligible", "executionReadiness", "status"
+      ],
+      "properties": {
+        "testId": { "$ref": "#/$defs/nonEmptyString" },
+        "journeyId": { "type": "string", "pattern": "^TC-J[0-9]{2,}$" },
+        "planReference": { "$ref": "#/$defs/nonEmptyString" },
+        "requirementReferences": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        },
+        "storyReference": { "$ref": "#/$defs/nonEmptyString" },
+        "featureReference": { "$ref": "#/$defs/nonEmptyString" },
+        "releaseReference": { "$ref": "#/$defs/nonEmptyString" },
+        "businessTitle": { "$ref": "#/$defs/nonEmptyString" },
+        "businessDescription": { "$ref": "#/$defs/nonEmptyString" },
+        "expectedOutcome": { "$ref": "#/$defs/nonEmptyString" },
+        "risk": { "enum": ["Critical", "High", "Medium", "Low"] },
+        "priority": { "enum": ["P0", "P1", "P2", "P3"] },
+        "testPacks": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "enum": ["Smoke", "Regression", "UAT", "Critical Journey", "Feature"] }
+        },
+        "automationReference": { "$ref": "#/$defs/automationReference" },
+        "browserApplicability": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "enum": ["__BROWSER_PROJECT__"] }
+        },
+        "environmentApplicability": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "enum": ["__NON_PRODUCTION_ENVIRONMENT__"] }
+        },
+        "businessPersona": { "enum": ["__BUSINESS_PERSONA__"] },
+        "runtimeAuthProfile": { "enum": ["__RUNTIME_AUTH_PROFILE__"] },
+        "roleSensitive": { "type": "boolean" },
+        "requiredAccessProfile": { "enum": ["__REQUIRED_ACCESS_PROFILE__"] },
+        "tags": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/nonEmptyString" } },
+        "portalEligible": { "type": "boolean" },
+        "portalExclusionReason": { "type": ["string", "null"], "minLength": 1 },
+        "portalExclusionRemediation": { "$ref": "#/$defs/remediation" },
+        "executionReadiness": { "enum": ["Ready", "Blocked", "ManualAuthRequired", "DataSetupRequired"] },
+        "readinessReason": { "$ref": "#/$defs/nonEmptyString" },
+        "readinessRemediation": { "$ref": "#/$defs/remediation" },
+        "status": { "enum": ["Active", "Disabled", "Deprecated"] },
+        "statusReason": { "$ref": "#/$defs/nonEmptyString" },
+        "statusRemediation": { "$ref": "#/$defs/remediation" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "portalEligible": { "const": false } }, "required": ["portalEligible"] },
+          "then": { "required": ["portalExclusionReason", "portalExclusionRemediation"] },
+          "else": { "not": { "anyOf": [
+            { "required": ["portalExclusionRemediation"] },
+            { "properties": { "portalExclusionReason": { "type": "string" } }, "required": ["portalExclusionReason"] }
+          ] } }
+        },
+        {
+          "if": { "properties": { "executionReadiness": { "const": "Ready" } }, "required": ["executionReadiness"] },
+          "then": { "not": { "anyOf": [{ "required": ["readinessReason"] }, { "required": ["readinessRemediation"] }] } },
+          "else": { "required": ["readinessReason", "readinessRemediation"] }
+        },
+        {
+          "if": { "properties": { "status": { "const": "Active" } }, "required": ["status"] },
+          "then": { "not": { "anyOf": [{ "required": ["statusReason"] }, { "required": ["statusRemediation"] }] } },
+          "else": { "required": ["statusReason", "statusRemediation"] }
+        },
+        {
+          "if": { "properties": { "roleSensitive": { "const": true } }, "required": ["roleSensitive"] },
+          "then": { "required": ["requiredAccessProfile"] },
+          "else": { "not": { "required": ["requiredAccessProfile"] } }
+        }
+      ]
+    }
+  }
+}

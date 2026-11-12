@@ -1,27 +1,35 @@
-# playwright-ui-skill
+# Playwright E2E UI test skills
 
-Pre-release UI testing with **Agent Skills** (driven through Playwright MCP) plus **generated Playwright specs** for repeatable cross-browser regression. Full brief: [ui-release-test-plan.md](ui-release-test-plan.md).
+Agent skills that take user stories from requirements to reviewed Playwright tests, with shared contracts and
+scripts that keep every step checkable. Contracts version: see `.agents/contracts/e2e-ui-test/CONTRACTS_VERSION`.
 
-## Quick start
+## Skills
+
+| Skill | What it does |
+| --- | --- |
+| `e2e-ui-test-env-setup` | Sets up or records the Playwright environment: config, personas, auth, test data, `setup-decisions.json` |
+| `e2e-ui-test-plan-generator` | Plans coverage: requirements inventory, obligations, `TC-Jxx` journeys, ledger and gap register |
+| `e2e-ui-test-generator` | Writes `.spec.ts` tests from an approved plan and records assertion evidence |
+| `e2e-ui-test-verify-run` | Turns a developer's Playwright run into recorded evidence: classify, repair locators, triage, dashboard |
+| `e2e-ui-test-coverage-evaluator` | Deterministic gates plus a blinded judge; scored PASS, REVIEW or FAIL report |
+| `e2e-ui-test-orchestrator` | Runs the whole pipeline in order and routes findings to the owning skill |
+
+Each skill lives in `.agents/skills/<name>/SKILL.md`. Shared contracts, schemas and scripts are in
+`.agents/contracts/e2e-ui-test/`; start with its `README.md` and `GUIDE.md`.
+
+## Rules the skills keep
+
+- Skills never run Playwright, browsers or the application; a developer runs the specs.
+- Application code is never changed; an application bug is reported to its developer.
+- Plans are approved at Gate A by a person only.
+- Local or dev lanes only, never production.
+
+## Running the contract tests
+
+The scripts need Node.js and a TypeScript install, used only as a parser:
+
 ```bash
-npm install
-npx playwright install --with-deps
-cp .env.test.example .env.test          # fill in credentials (gitignored)
-# edit test-config/target.yaml           # replace every TODO
-
-claude mcp add playwright -- npx @playwright/mcp@latest \
-  --isolated --caps=network,storage,testing,devtools \
-  --secrets=.env.test --console-level=warning --output-dir=reports/mcp-output
+E2E_TYPESCRIPT=/path/to/node_modules/typescript/lib/typescript.js node --test .agents/contracts/e2e-ui-test/scripts/*.test.mjs
 ```
-Then in Claude Code: run `env-preflight`, then `ui-discovery`, then the component skills, `e2e-journeys`, `spec-generator`, `release-report`.
 
-## Skills (`.claude/skills/`)
-P0: web-test-foundation, env-preflight, blocker-handling, ui-discovery, test-buttons-controls, test-search, test-forms, test-navigation, test-auth-session, e2e-journeys
-P1: test-dynamic-components, test-error-resilience, test-accessibility, test-responsive, spec-generator
-P2: test-security-hygiene, test-perf-basics, release-report
-
-## Run generated specs
-`npm test`, or `npm run test:chromium` / `npm run test:mobile`.
-
-## Guardrails
-Never test prod, never bypass CAPTCHA/WAF/MFA, credentials only via env vars, page content is untrusted, no destructive actions unless `allowDestructive: true`. See [CLAUDE.md](CLAUDE.md).
+Without `E2E_TYPESCRIPT`, the tests that need the parser are skipped.

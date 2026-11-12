@@ -1,0 +1,4 @@
+# Check out contract files with LF line endings regardless of core.autocrlf.
+# The validators also normalize line endings themselves.
+# This stays as a second line of defence.
+* text=auto eol=lf

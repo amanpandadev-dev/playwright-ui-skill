@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "E2E run triage",
+  "description": "A person's or agent's explanation of each failed or flaky test in one verify attempt. The results stay in run-<n>.json; this file only explains them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "runId", "attempt", "triagedBy", "items"],
+  "properties": {
+    "schemaVersion": { "enum": ["1.0", "1.1"] },
+    "runId": { "type": "string", "pattern": "^\\d{8}-\\d{4}$" },
+    "attempt": { "type": "integer", "minimum": 1 },
+    "triagedBy": { "$ref": "#/$defs/text" },
+    "items": { "type": "array", "items": { "$ref": "#/$defs/item" } },
+    "notes": { "type": "array", "items": { "$ref": "#/$defs/note" } }
+  },
+  "$defs": {
+    "text": { "type": "string", "minLength": 1 },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "detail"],
+      "properties": {
+        "source": { "$ref": "#/$defs/text" },
+        "detail": { "$ref": "#/$defs/text" }
+      }
+    },
+    "faultReasoning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requirementSays", "testAsserts", "applicationShows", "whyNotTheOther"],
+      "properties": {
+        "requirementSays": { "$ref": "#/$defs/text" },
+        "testAsserts": { "$ref": "#/$defs/text" },
+        "applicationShows": { "$ref": "#/$defs/text" },
+        "whyNotTheOther": { "$ref": "#/$defs/text" }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["testId", "fault", "confidence", "whatHappened", "whyItHappened", "evidence", "fix", "fixOwner"],
+      "properties": {
+        "testId": { "$ref": "#/$defs/text" },
+        "fault": { "enum": ["DeveloperBug", "AgentTestBug", "Environment", "TestData", "RequirementGap", "Undetermined"] },
+        "confidence": { "enum": ["Confirmed", "Likely", "Unknown"] },
+        "whatHappened": { "$ref": "#/$defs/text" },
+        "whyItHappened": { "$ref": "#/$defs/text" },
+        "whyThisFault": { "$ref": "#/$defs/faultReasoning" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
+        "fix": { "$ref": "#/$defs/text" },
+        "fixOwner": { "$ref": "#/$defs/text" },
+        "classifierDisagreement": { "$ref": "#/$defs/text" }
+      }
+    },
+    "note": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "detail", "owner"],
+      "properties": {
+        "title": { "$ref": "#/$defs/text" },
+        "detail": { "$ref": "#/$defs/text" },
+        "owner": { "$ref": "#/$defs/text" }
+      }
+    }
+  }
+}

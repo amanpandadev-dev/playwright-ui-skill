@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Independent requirements inventory v1.1 (accepts v1.0, which fails gates G-D01 and G-D02)",
+  "type": "object",
+  "required": ["schemaVersion", "requirements"],
+  "properties": {
+    "schemaVersion": {"enum": ["1.0", "1.1"]},
+    "derivationRule": {"description": "How requirement IDs were derived when the source does not own them, such as bullet order under an Acceptance Criteria heading.", "type": "string", "minLength": 1},
+    "extraction": {
+      "description": "Which pass produced this inventory. The extraction pass reads only the authority, before any plan is authored.",
+      "type": "object", "required": ["pass", "producedBy"],
+      "properties": {"pass": {"const": "independent-extraction"}, "producedBy": {"$ref": "#/$defs/text"}, "sourceCommit": {"$ref": "#/$defs/text"}}
+    },
+    "criteriaSections": {
+      "description": "Gate G-D01: every content unit under every heading that holds criteria is accounted for by index.",
+      "type": "object", "required": ["headingPattern", "sections"],
+      "properties": {
+        "headingPattern": {"$ref": "#/$defs/text"},
+        "sections": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/section"}},
+        "excludedSections": {"type": "array", "items": {"type": "object", "required": ["path", "heading", "reason"], "properties": {"path": {"$ref": "#/$defs/text"}, "heading": {"$ref": "#/$defs/text"}, "reason": {"$ref": "#/$defs/text"}}}}
+      }
+    },
+    "sourceIdentifiers": {
+      "description": "Gate G-D02: where source-owned requirement identifiers (FR, NFR, REQ) are declared, or why the authority has none.",
+      "type": "object",
+      "properties": {
+        "pattern": {"$ref": "#/$defs/text"},
+        "sections": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/sourceRef"}},
+        "none": {"$ref": "#/$defs/text"}
+      },
+      "anyOf": [{"required": ["pattern", "sections"]}, {"required": ["none"]}]
+    },
+    "requirementGroups": {
+      "type": "array",
+      "items": {
+        "type": "object", "required": ["groupId", "sourceReference", "sourceText", "requirementIds"],
+        "properties": {
+          "groupId": {"$ref": "#/$defs/text"},
+          "sourceReference": {"$ref": "#/$defs/sourceRef"},
+          "sourceText": {"$ref": "#/$defs/text"},
+          "requirementIds": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+          "noCriterionReason": {"$ref": "#/$defs/text"}
+        }
+      }
+    },
+    "requirements": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["storyId", "requirementId", "sourceReference", "sourceText", "sourceFingerprint", "obligationIds"],
+        "properties": {
+          "storyId": {"type": "string", "minLength": 1},
+          "requirementId": {"type": "string", "minLength": 1},
+          "sourceReference": {"$ref": "#/$defs/sourceRef"},
+          "sourceText": {"type": "string", "minLength": 1},
+          "sourceFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "obligationIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+        }
+      }
+    }
+  },
+  "allOf": [
+    {"if": {"properties": {"schemaVersion": {"const": "1.1"}}}, "then": {"required": ["extraction", "criteriaSections", "sourceIdentifiers"]}}
+  ],
+  "$defs": {
+    "text": {"type": "string", "minLength": 1},
+    "sourceRef": {"type": "object", "required": ["path", "heading"], "properties": {"path": {"$ref": "#/$defs/text"}, "heading": {"$ref": "#/$defs/text"}}},
+    "section": {
+      "type": "object", "required": ["path", "heading", "units"],
+      "properties": {
+        "path": {"$ref": "#/$defs/text"}, "heading": {"$ref": "#/$defs/text"},
+        "units": {"type": "array", "items": {
+          "type": "object", "required": ["index", "kind", "disposition"],
+          "properties": {
+            "index": {"type": "integer", "minimum": 1},
+            "kind": {"enum": ["list-item", "numbered-item", "table-row", "paragraph", "code-block"]},
+            "disposition": {"enum": ["criterion", "non-criterion", "out-of-scope"]},
+            "requirementIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+            "reason": {"$ref": "#/$defs/text"}
+          },
+          "allOf": [
+            {"if": {"properties": {"disposition": {"const": "criterion"}}}, "then": {"required": ["requirementIds"]}, "else": {"required": ["reason"]}}
+          ]
+        }}
+      }
+    }
+  }
+}

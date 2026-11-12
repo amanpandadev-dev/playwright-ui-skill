@@ -1,0 +1,579 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "E2E setup decisions v1",
+  "description": "Written only by e2e-ui-test-env-setup. Read-only to e2e-ui-test-plan-generator, e2e-ui-test-generator and e2e-ui-test-coverage-evaluator.1.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "contractsVersion",
+    "applicationId",
+    "applicationDisplayName",
+    "projectMode",
+    "owningPackage",
+    "moduleFormat",
+    "testDir",
+    "docsRoot",
+    "configPath",
+    "lanes",
+    "agentPlatform",
+    "portal",
+    "decidedBy",
+    "decidedAt",
+    "sourceCommit"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "contractsVersion": {
+      "$ref": "#/$defs/semver"
+    },
+    "applicationId": {
+      "$ref": "#/$defs/text"
+    },
+    "applicationDisplayName": {
+      "$ref": "#/$defs/text"
+    },
+    "projectMode": {
+      "enum": [
+        "Greenfield",
+        "Brownfield"
+      ]
+    },
+    "owningPackage": {
+      "$ref": "#/$defs/text"
+    },
+    "moduleFormat": {
+      "enum": [
+        "commonjs",
+        "esm"
+      ]
+    },
+    "testDir": {
+      "$ref": "#/$defs/text"
+    },
+    "docsRoot": {
+      "$ref": "#/$defs/text"
+    },
+    "configPath": {
+      "$ref": "#/$defs/text"
+    },
+    "lanes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/lane"
+      }
+    },
+    "agentPlatform": {
+      "$ref": "#/$defs/text"
+    },
+    "portal": {
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "reason": {
+          "$ref": "#/$defs/text"
+        },
+        "readyBasis": {
+          "description": "Why at least one catalog entry can be Ready on an unattended runner. Required by check-setup.mjs when the portal is enabled.",
+          "$ref": "#/$defs/text"
+        }
+      },
+      "if": {
+        "properties": {
+          "enabled": {
+            "const": false
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "reason"
+        ]
+      }
+    },
+    "recordedFrom": {
+      "description": "How these decisions were produced. existing-setup means derived from an established Playwright setup by e2e-ui-test-env-setup's record operation.",
+      "enum": [
+        "new-setup",
+        "reconfigure",
+        "existing-setup"
+      ]
+    },
+    "evidence": {
+      "description": "For each derived field, the repository files that justify its value. Fields absent here were confirmed by the developer.",
+      "type": "object"
+    },
+    "decidedBy": {
+      "$ref": "#/$defs/text"
+    },
+    "decidedAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "sourceCommit": {
+      "$ref": "#/$defs/text"
+    },
+    "catalogPath": {
+      "description": "Repository catalog path; defaults to <testDir>/test-catalog.json.",
+      "$ref": "#/$defs/text"
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "lane": {
+      "type": "object",
+      "required": [
+        "laneId",
+        "target",
+        "environment",
+        "authMode",
+        "browserProjects",
+        "personas",
+        "dataStrategy",
+        "fixtureEntryPoint"
+      ],
+      "properties": {
+        "laneId": {
+          "$ref": "#/$defs/text"
+        },
+        "target": {
+          "enum": [
+            "local",
+            "azure",
+            "aws",
+            "gcp",
+            "other"
+          ]
+        },
+        "environment": {
+          "$ref": "#/$defs/text"
+        },
+        "authMode": {
+          "enum": [
+            "entra",
+            "app-dev-auth",
+            "none",
+            "remote-entra",
+            "remote-other"
+          ]
+        },
+        "browserProjects": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "personas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "persona",
+              "accessProfile",
+              "identity"
+            ],
+            "properties": {
+              "persona": {
+                "$ref": "#/$defs/text"
+              },
+              "accessProfile": {
+                "$ref": "#/$defs/text"
+              },
+              "identity": {
+                "description": "real: a genuine identity-provider account; app-token: a token issued by the application's development authentication, exercising application RBAC but not identity-provider role assignment; simulated: role mocked in the browser.",
+                "enum": [
+                  "real",
+                  "app-token",
+                  "simulated"
+                ]
+              },
+              "stateKey": {
+                "description": "File-name key of this persona's auth state under authStateLocation.",
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$"
+              },
+              "approvedIdentity": {
+                "description": "For identity real: whether an approved account exists for this persona.",
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "dataStrategy": {
+          "enum": [
+            "api-seeded",
+            "existing-dataset",
+            "route-mocks"
+          ]
+        },
+        "authStateLocation": {
+          "$ref": "#/$defs/text"
+        },
+        "fixtureEntryPoint": {
+          "$ref": "#/$defs/text"
+        },
+        "authChoice": {
+          "description": "Local lanes: the authentication options offered after discovery, and every development-auth candidate found by check-setup.mjs discover, offered or rejected with a reason.",
+          "type": "object",
+          "required": [
+            "offered"
+          ],
+          "properties": {
+            "offered": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "app-dev-auth",
+                  "entra",
+                  "none"
+                ]
+              }
+            },
+            "devAuthCandidates": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "path",
+                  "match"
+                ],
+                "properties": {
+                  "path": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "match": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "offered": {
+                    "type": "boolean"
+                  },
+                  "rejectedReason": {
+                    "$ref": "#/$defs/text"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "devAuth": {
+          "description": "Required for authMode app-dev-auth: the evidenced development token endpoint, its non-production guard and the role per persona.",
+          "type": "object",
+          "required": [
+            "endpoint",
+            "evidence",
+            "guard",
+            "guardEvidence",
+            "rolesSupported",
+            "personaRoles"
+          ],
+          "properties": {
+            "endpoint": {
+              "type": "string",
+              "pattern": "^(GET|POST|PUT) /\\S+$"
+            },
+            "request": {
+              "$ref": "#/$defs/text"
+            },
+            "evidence": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/text"
+              }
+            },
+            "browserSignIn": {
+              "description": "How the application itself uses the development token in the browser, with evidence; absent means API-only use.",
+              "$ref": "#/$defs/text"
+            },
+            "guard": {
+              "$ref": "#/$defs/text"
+            },
+            "guardEvidence": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/text"
+              }
+            },
+            "rolesSupported": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/text"
+              }
+            },
+            "personaRoles": {
+              "type": "object"
+            }
+          }
+        },
+        "portability": {
+          "description": "Whether this lane's specs can run against another target. Route-mocked or simulated-persona lanes are lane-specific.",
+          "enum": [
+            "portable",
+            "lane-specific"
+          ]
+        },
+        "portabilityNote": {
+          "$ref": "#/$defs/text"
+        },
+        "unattendedAuth": {
+          "description": "Confirmed that this lane authenticates without a human on an unattended runner.",
+          "type": "boolean"
+        },
+        "readinessBlockers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "personas",
+              "blocker",
+              "remediation",
+              "owner"
+            ],
+            "properties": {
+              "personas": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/text"
+                }
+              },
+              "blocker": {
+                "$ref": "#/$defs/text"
+              },
+              "remediation": {
+                "$ref": "#/$defs/text"
+              },
+              "owner": {
+                "$ref": "#/$defs/text"
+              }
+            }
+          }
+        },
+        "data": {
+          "description": "Test-data contract. Expected for dataStrategy api-seeded and existing-dataset; check-setup.mjs verify (gate G-D12) reports it missing, so setups recorded before 2.5.0 stay schema-valid. See .agents/contracts/e2e-ui-test/test-data.md.",
+          "type": "object",
+          "required": [
+            "seed",
+            "applicationApiPatterns",
+            "cleanup"
+          ],
+          "properties": {
+            "seed": {
+              "description": "Committed fixed seed for every generator.",
+              "type": "integer",
+              "minimum": 1
+            },
+            "seedAs": {
+              "description": "Default persona whose identity creates records; per-entity overrides live in createInterfaces.",
+              "$ref": "#/$defs/text"
+            },
+            "createInterfaces": {
+              "description": "Evidenced ways to create records: an API route (METHOD path) or a seed command.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "entity",
+                  "interface",
+                  "evidence"
+                ],
+                "properties": {
+                  "entity": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "interface": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "evidence": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "$ref": "#/$defs/text"
+                    }
+                  },
+                  "seedAs": {
+                    "$ref": "#/$defs/text"
+                  }
+                }
+              }
+            },
+            "cleanup": {
+              "type": "object",
+              "required": [
+                "mode"
+              ],
+              "properties": {
+                "mode": {
+                  "enum": [
+                    "api-delete",
+                    "reset-command",
+                    "disposable-environment",
+                    "none"
+                  ]
+                },
+                "interfaces": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/text"
+                  }
+                },
+                "command": {
+                  "$ref": "#/$defs/text"
+                },
+                "evidence": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "$ref": "#/$defs/text"
+                  }
+                },
+                "confirmedBy": {
+                  "description": "For disposable-environment: who confirmed the environment is wiped between runs.",
+                  "$ref": "#/$defs/text"
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "mode": {
+                        "enum": [
+                          "api-delete",
+                          "reset-command"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "evidence"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "mode": {
+                        "const": "disposable-environment"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "confirmedBy"
+                    ]
+                  }
+                }
+              ]
+            },
+            "namespace": {
+              "description": "Where the per-worker namespace is written on created records (for example a title prefix or an external reference field).",
+              "$ref": "#/$defs/text"
+            },
+            "applicationApiPatterns": {
+              "description": "URL globs of the application's own API. Seeded lanes must not fake responses on these.",
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/text"
+              }
+            },
+            "externalMocks": {
+              "description": "External dependencies that may still be faked in a seeded lane, each with the reason.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "pattern",
+                  "reason"
+                ],
+                "properties": {
+                  "pattern": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "reason": {
+                    "$ref": "#/$defs/text"
+                  }
+                }
+              }
+            },
+            "dataModule": {
+              "description": "Directory of the generated synthetic-data builders, under testDir.",
+              "$ref": "#/$defs/text"
+            },
+            "dataset": {
+              "description": "For existing-dataset: the named non-production dataset and how it is kept deterministic.",
+              "type": "object",
+              "required": [
+                "reference",
+                "readOnly"
+              ],
+              "properties": {
+                "reference": {
+                  "$ref": "#/$defs/text"
+                },
+                "readOnly": {
+                  "type": "boolean"
+                },
+                "resetBy": {
+                  "$ref": "#/$defs/text"
+                }
+              }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "authMode": {
+                "const": "none"
+              }
+            }
+          },
+          "else": {
+            "required": [
+              "authStateLocation"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "authMode": {
+                "const": "app-dev-auth"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "devAuth"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
